@@ -1,7 +1,29 @@
-.body {
-  font-family: 'Arial';
-  margin: 20;
-  padding: 20;
+body {
+	background-color: #66BFFF;
+}
+
+.nav {
+	background-color: #0D5080;
+	color: white;
+}
+.nav a {
+	color: white;
+	font-weight: bold;
+}
+.header {
+	border-radius: 0 0 10px 10px;
+	box-shadow: 4px 4px 5px -4px rgba(0,0,0,0.75);
+}
+.footer {
+	border-radius: 10px 10px 0 0;
+	box-shadow: 4px 4px 5px -4px rgba(0,0,0,0.75);
+}
+
+.container {
+	background-color: white;
+	border-width: 0 3px 3px 3px !important;
+	border: solid #0D5080;
+	box-shadow: 4px 4px 5px -4px rgba(0,0,0,0.75);
 }
 
 .aside {
@@ -15,31 +37,37 @@
 	margin: 20px 0;
 } 
 .aside ul li {
-  list-style-type: none;
+	list-style-type: none;
 }
 
 a {
 	text-decoration: underline;
 }
 
-figure {
-	display: block;
-	/* FIXME: zeroed out these or else Diagram mouse interaction breaks. */
-	margin-block-start: 0;
-	margin-block-end: 0;
-	margin-inline-start: 0;
-	margin-inline-end: 0;	
-}
-		
-span[data-name] {
-	cursor: col-resize;
-	font-weight: bold;
-	border-bottom: 2px dotted #a44;
-}
-.draggable {
-	cursor: move;
-}
-
 a.interactive {
 	text-decoration: dotted underline !important;
+}
+
+.debug {
+	border: solid red 1px;
+}
+
+.player {
+	width: 20px;
+}
+
+figure {
+	width: 500px;
+}
+
+table.streaming tr.section {
+	border: solid 3px black;
+}
+
+foreignObject.label {
+	box-shadow: 4px 4px 5px -4px rgba(0,0,0,0.75);
+}
+
+text.scrubbable {
+	cursor: col-resize;
 }

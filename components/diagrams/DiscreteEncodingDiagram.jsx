@@ -1,10 +1,9 @@
 import React from 'react'
 import * as d3 from 'd3'
-import PropTypes from 'prop-types'
 import simplehtm from 'simplehtm'
-import { lineFunction, precisionRound } from './helpers'
+import { precisionRound } from './helpers'
 
-const { BoundedScalarEncoder, ScalarEncoder } = simplehtm.encoders
+const { CategoryEncoder } = simplehtm.encoders
 
 const offColor = 'white'
 const onColor = 'skyblue'
@@ -12,7 +11,7 @@ const outputCellsTopMargin = 120
 const sideGutter = 10
 const topGutter = 40
 
-class SimpleScalarEncoder extends React.Component {
+class DiscreteEncodingDiagram extends React.Component {
 	svgRef = React.createRef() // this will give you reference to HTML DOM element
 
 	encoding = undefined
@@ -20,7 +19,7 @@ class SimpleScalarEncoder extends React.Component {
 	value = this.props.value || 0
 
 	// handle setting up when params are set/changed
-	update() {
+  update() {
 		this.resetEncoder(this.value)
 		this.orientD3()
 		this.renderNumberLine()
@@ -52,7 +51,7 @@ class SimpleScalarEncoder extends React.Component {
 		} = this.encoder
 		// Create D3 scales
 		this.valToScreen = d3.scaleLinear()
-			.domain([min, max])
+			.domain([min+1, max])
 			.range([sideGutter, diagramWidth - sideGutter])
 		this.bitsToOutputDisplay = d3.scaleLinear()
 			.domain([0, n])
@@ -62,14 +61,14 @@ class SimpleScalarEncoder extends React.Component {
 			.range([0, n])
 	}
 
-	resetEncoder(value) {
-		const {
-			bounded, min, max, resolution, n, w
-		} = this.props
-		this.encoder = new (bounded ? BoundedScalarEncoder : ScalarEncoder)({
-			min, max, resolution, w, n, bounded,
-		})
-		this.encoding = this.encoder.encode(value)
+  resetEncoder(value) {
+    const categoryLength = this.props.categoryLength
+    const w = Math.floor(this.props.n / categoryLength)
+		this.encoder = new CategoryEncoder({
+      w: w,
+      categories: [...Array(categoryLength).keys()]
+    })
+		this.encoding = this.encoder.encode(Math.round(this.value - 1))
 	}
 
 	renderNumberLine() {
@@ -84,17 +83,16 @@ class SimpleScalarEncoder extends React.Component {
 		g.attr('transform', `translate(0,${topGutter})`)
 
 		const markerWidth = 1
-		const markerHeight = 16
+		const markerHeight = 20
 
-    const x = this.valToScreen(value) - (markerWidth / 2)
-    const centeredX = x - 10
+		const x = this.valToScreen(value) - (markerWidth / 2)
 		const y = 0 - (markerHeight / 2)
 
 		const text = g.select('text')
 		const mark = g.select('rect')
 
 		// FIXME: standardize some styles for diagrams
-		text.attr('x', centeredX)
+		text.attr('x', x)
 			.attr('y', y)
 			.attr('font-family', 'sans-serif')
 			.attr('font-size', '10pt')
@@ -106,7 +104,7 @@ class SimpleScalarEncoder extends React.Component {
 			.attr('width', markerWidth)
 			.attr('height', markerHeight)
 			.attr('x', x)
-			.attr('y', y + 6)
+			.attr('y', y)
 	}
 
 	renderOutputCells() {
@@ -162,68 +160,6 @@ class SimpleScalarEncoder extends React.Component {
 		return [left, right]
 	}
 
-	handleOutputCellHover(e) {
-		const { diagramWidth, n } = this.props
-		const $hoverGroup = this.root.select('g.range')
-		const cellWidth = Math.floor(diagramWidth / n)
-
-		const lineX = e.pageX - this.svgRef.current.getBoundingClientRect().x
-	//	const lineX = e.pageX - sideGutter
-		const index = Math.floor(this.displayToBitRange(lineX))
-		const cx = this.bitsToOutputDisplay(index) + (cellWidth / 2)
-		const cy = outputCellsTopMargin
-		$hoverGroup.select('g.range circle')
-			.attr('r', cellWidth / 2)
-			.attr('cx', cx)
-			.attr('cy', cy)
-			.attr('fill', 'royalblue')
-
-		const valueRange = this.getRangeFromBitIndex(index, this.encoder)
-		const leftValueBound = Math.max(this.encoder.min, valueRange[0]),
-			rightValueBound = Math.min(this.encoder.max, valueRange[1])
-		const leftLineData = []
-		const rightLineData = []
-		leftLineData.push({ x: cx, y: cy })
-		rightLineData.push({ x: cx, y: cy })
-		const nearX = this.valToScreen(leftValueBound)
-		const farX = this.valToScreen(rightValueBound)
-		// Intermediary points for curving
-		leftLineData.push({
-			x: cx - 10,
-			y: cy - 20,
-		})
-		leftLineData.push({
-			x: nearX,
-			y: topGutter + 20
-		})
-		rightLineData.push({
-			x: cx + 10,
-			y: cy - 20,
-		})
-		rightLineData.push({
-			x: farX,
-			y: topGutter + 20
-		})
-
-		// Point on value line
-		leftLineData.push({
-			x: nearX,
-			y: topGutter
-		})
-		rightLineData.push({
-			x: farX,
-			y: topGutter
-		})
-		$hoverGroup.select('path.left')
-			.attr('d', lineFunction(leftLineData))
-			.attr('stroke', 'black')
-			.attr('fill', 'none')
-		$hoverGroup.select('path.right')
-			.attr('d', lineFunction(rightLineData))
-			.attr('stroke', 'black')
-			.attr('fill', 'none')
-		$hoverGroup.attr('visibility', 'visible')
-	}
 
 	// This is the only thing that could change internal state coming
 	// from inside this child.
@@ -249,7 +185,7 @@ class SimpleScalarEncoder extends React.Component {
 			<svg id={this.props.id}
 				ref={this.svgRef}
 				onMouseMove={
-					(e) => e.target.className.animVal === 'bit' ? this.handleOutputCellHover(e) : this.handleNumberLineHover(e)
+					(e) => this.handleNumberLineHover(e)
 				}>
 
 				<text x="10" y="20" fontSize="10pt">scalar value</text>
@@ -263,27 +199,9 @@ class SimpleScalarEncoder extends React.Component {
 				<text x="10" y="80" fontSize="10pt">encoding</text>
 				<g className="output-cells"></g>
 
-				<g className="range" visibility="hidden">
-					<circle></circle>
-					<path className="left"></path>
-					<path className="right"></path>
-				</g>
 			</svg>
 		)
 	}
 }
 
-SimpleScalarEncoder.propTypes = {
-	bounded: PropTypes.bool,
-	value: PropTypes.number,
-	onUpdate: PropTypes.func,
-	min: PropTypes.number,
-	max: PropTypes.number,
-	resolution: PropTypes.number,
-	id: PropTypes.string.isRequired,
-	w: PropTypes.number.isRequired,
-	n: PropTypes.number.isRequired,
-	diagramWidth: PropTypes.number.isRequired,
-}
-
-export default SimpleScalarEncoder
+export default DiscreteEncodingDiagram
